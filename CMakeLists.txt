@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
-project(BlockTridiagProject LANGUAGES CXX)
+project(NLA_Project LANGUAGES CXX)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -15,15 +15,14 @@ find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_library(BlockTridiag STATIC
-    src/BlockTridiag.cpp
+add_library(NLA_Project STATIC
+    src/TMatrix.cpp
+    src/HouseholderTridiag.cpp
 )
 
 # Define the executable target
-add_executable(main ${SOURCES})
+add_executable(main main.cpp)
 
 # Link Armadillo library
 target_link_libraries(main PRIVATE ${ARMADILLO_LIBRARIES})
-
-add_executable(mainExec main.cpp)
-target_link_libraries(mainExec PRIVATE BlockTridiag)
+target_link_libraries(main PRIVATE NLA_Project)

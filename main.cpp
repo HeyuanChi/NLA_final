@@ -1,99 +1,62 @@
 #include <iostream>
-#include <fstream>
 #include <armadillo>
-#include "BlockTridiag.hpp"
+#include "HouseholderTridiag.hpp"
+#include "TMatrix.hpp"
 
+/**
+ * @brief Demonstrates how to tridiagonalize a randomly generated Hermitian matrix
+ *        using Householder transformations, and checks the result.
+ */
 int main()
 {
     using namespace arma;
-    int n = 20; // 至少20
-    int blockSize = 4; // 可调
-    
-    // =========== 1) 生成或读取一个 20x20 随机 Hermitian 矩阵 ===========
-    //    这里演示：随机生成后存到 "A_20x20.txt"，再读回来
-    {
-        cx_mat A_rand(n,n, fill::randn); 
-        // A_rand 内部是复数随机: real & imag 都 ~ Normal(0,1)
-        // 为了 Hermitian，需要让 A(i,j) = conj( A(j,i) ), diag 实数:
-        for(int i=0; i<n; i++){
-            A_rand(i,i) = cx_double( A_rand(i,i).real(), 0.0 ); // 实对角
-            for(int j=i+1; j<n; j++){
-                A_rand(j,i) = std::conj(A_rand(i,j));
-            }
-        }
 
-        std::ofstream fout("A_20x20.txt");
-        if(!fout.good()){
-            std::cerr << "Failed to open A_20x20.txt for writing.\n";
-            return 1;
-        }
+    // ------------------------------------------------------------------------
+    // 1) Prepare a random Hermitian matrix A
+    // ------------------------------------------------------------------------
+    arma_rng::set_seed_random();   // Initialize random seed
+    size_t n = 10;                  // Matrix dimension
 
-        // 写到文件 (简单写 real, imag 格式)
-        // 也可以用 A_rand.save("myfile", arma_ascii) 之类的Armadillo方法
-        // 这里手动演示格式
-        fout << n << "\n"; // write dimension
-        for(int r=0; r<n; r++){
-            for(int c=0; c<n; c++){
-                fout << A_rand(r,c).real() << " " << A_rand(r,c).imag() << "  ";
-            }
-            fout << "\n";
-        }
-        fout.close();
+    // Create a random complex matrix Z
+    cx_mat Z = randu<cx_mat>(n, n);
+
+    // Make A Hermitian by combining Z and its transpose:
+    // A = 0.5 * (Z + Z^T)
+    cx_mat A = 0.5 * (Z + Z.t());
+
+    // Force diagonal elements of A to be real
+    for (size_t i = 0; i < n; ++i) {
+        A(i, i) = std::complex<double>(A(i, i).real(), 0.0);
     }
 
-    // =========== 2) 读回 并做三对角化 ===========
+    // ------------------------------------------------------------------------
+    // 2) Apply Householder transformation to A
+    // ------------------------------------------------------------------------
+    cx_mat Q;          // Will hold the unitary (or orthonormal) transformation
+    TMatrix T(n);      // Will hold the tridiagonal matrix (diag + subdiag)
+    householderTridiag(A, Q, T);
 
-    cx_mat A(n,n, fill::zeros);
-    {
-        std::ifstream fin("A_20x20.txt");
-        if(!fin.good()){
-            std::cerr << "Failed to open A_20x20.txt for reading.\n";
-            return 1;
-        }
-        int dim;
-        fin >> dim;
-        if(dim!=n){
-            std::cerr << "Dimension mismatch!\n";
-            return 1;
-        }
-        for(int r=0; r<n; r++){
-            for(int c=0; c<n; c++){
-                double re, im;
-                fin >> re >> im;
-                A(r,c) = cx_double(re, im);
-            }
-        }
-        fin.close();
-    }
+    // ------------------------------------------------------------------------
+    // 3) Validate the result: compare Q^H * A * Q with T.fullMatrix()
+    // ------------------------------------------------------------------------
+    cx_mat testMat = Q.t() * A * Q;  
 
-    // 现在 A 是一个 20x20 复Hermitian矩阵
-    std::cout << "Loaded Hermitian matrix A (n=20) from file.\n";
+    // Convert the TMatrix to a dense real symmetric matrix
+    mat TFull = T.fullMatrix();
 
-    // 调用 blockHermitianTridiag
-    cx_mat Q;
-    TriDiag T = blockHermitianTridiag(A, blockSize, Q);
+    // Compare only the real part of (Q^H A Q) to TFull 
+    double diff = norm(real(testMat) - TFull, "fro");
+    std::cout << "Frobenius norm of difference: " << diff << std::endl << std::endl;
 
-    // 验证
-    // 先构造三对角 fullT
-    mat fullT(n,n, fill::zeros);
-    for(int i=0; i<n; i++){
-        fullT(i,i) = T.d(i);
-        if(i < n-1){
-            fullT(i,i+1) = T.e(i);
-            fullT(i+1,i) = T.e(i);
-        }
-    }
-    cx_mat cfullT = conv_to< cx_mat >::from(fullT);
+    // ------------------------------------------------------------------------
+    // Output the results for inspection
+    // ------------------------------------------------------------------------
+    std::cout << "A (random Hermitian):\n" << A << std::endl;
+    std::cout << "Q (transformation matrix):\n" << Q << std::endl;
+    std::cout << "T (tridiagonal) in dense form:\n" << TFull << std::endl;
+    std::cout << "Q^H A Q (using Q.t() for demonstration):\n" << testMat << std::endl;
+    std::cout << "Difference (real(testMat) - TFull):\n"
+              << real(testMat) - TFull << std::endl;
 
-    // A_recon = Q * T * Q^H
-    cx_mat A_recon = Q * cfullT * Q.st();
-    cx_mat Diff = A - A_recon;
-    double maxDiff = Diff.abs().max();
-
-    std::cout << "blockSize = " << blockSize << ", matrix dim = " << n << "\n";
-    std::cout << "Check A - Q*T*Q^H, max abs diff = " << maxDiff << "\n";
-
-    // 可以把 T.d, T.e 打印出来
-    // or do further steps, e.g. compute eigen decomposition
     return 0;
 }
