@@ -1,61 +1,58 @@
+// ============ TMatrix.hpp =============
 #ifndef TMATRIX_HPP
 #define TMATRIX_HPP
 
 #include <armadillo>
 
 /**
- * @class TMatrix
- * @brief Stores the diagonal and subdiagonal of a tridiagonal matrix.
+ * @brief A class to store and operate on a real symmetric tridiagonal matrix.
  */
 class TMatrix {
 public:
-    /**
-     * @brief Constructs a TMatrix of size n, initializing diag and subdiag to zeros.
-     * @param n The dimension of the tridiagonal matrix
-     */
-    explicit TMatrix(size_t n)
-        : m_size(n), m_diag(n, arma::fill::zeros), m_subdiag(n - 1, arma::fill::zeros)
-    {}
+    explicit TMatrix(size_t n);
 
-    /**
-     * @brief Returns the size (dimension) of the matrix.
-     */
     size_t size() const { return m_size; }
 
-    /**
-     * @brief Access (read/write) a main diagonal element.
-     * @param i Index of the diagonal element
-     */
-    double& diag(size_t i) { return m_diag(i); }
+    // Accessors / Mutators
+    double& diag(int i)    { return m_diag(i); }
+    double  diag(int i)const { return m_diag(i); }
+    double& subdiag(int i) { return m_subdiag(i); }
+    double  subdiag(int i)const { return m_subdiag(i); }
 
-    /**
-     * @brief Access (read-only) a main diagonal element.
-     * @param i Index of the diagonal element
-     */
-    const double& diag(size_t i) const { return m_diag(i); }
-
-    /**
-     * @brief Access (read/write) a subdiagonal element.
-     * @param i Index of the subdiagonal element
-     */
-    double& subdiag(size_t i) { return m_subdiag(i); }
-
-    /**
-     * @brief Access (read-only) a subdiagonal element.
-     * @param i Index of the subdiagonal element
-     */
-    const double& subdiag(size_t i) const { return m_subdiag(i); }
-
-    /**
-     * @brief Reconstructs the full (dense) matrix for debugging or output.
-     * @return A dense arma::mat representing the tridiagonal matrix
-     */
+    // Reconstruct the full matrix (mainly for debugging/printing)
     arma::mat fullMatrix() const;
 
+    // Main function: compute eigenvalues (and optionally eigenvectors)
+    // Returns 0 if fully converged, otherwise returns the (sub-block) start index
+    int computeEigen(int maxIter=100000, bool verbose=false, bool computeEigenvectors=false);
+
+    // Get results
+    arma::vec getEigenvalues() const { return m_diag; }
+    arma::mat getEigenvectors() const { return m_eigvecs; }
+
 private:
-    size_t   m_size;        ///< Dimension of the matrix
-    arma::vec m_diag;       ///< Main diagonal (length n)
-    arma::vec m_subdiag;    ///< Subdiagonal (length n-1)
+    size_t    m_size;       // matrix dimension
+    arma::vec m_diag;       // main diagonal
+    arma::vec m_subdiag;    // subdiagonal (length n-1)
+    arma::mat m_eigvecs;    // columns are eigenvectors (if computed)
+
+private:
+    // handle a 2x2 block => compute eigenvalues and optionally eigenvectors
+    static void computeEigen2x2(double a, double b, double c,
+                                double& lambda1, double& lambda2,
+                                arma::mat* localU = nullptr);
+
+    // Wilkinson shift
+    static double wilkinsonShift(double a_nm1, double a_n, double b_nm1);
+
+    // Perform one QR step with shift on sub-block [l..m] (Bulge Chase)
+    void qrStepTridiag(int l, int m, bool computeEigenvectors);
+
+    // handle sub-block: 1x1 => trivial, 2x2 => direct solve, else => qrStepTridiag
+    void handleSubBlock(int& l, int lend,
+                        int& iterCount, int maxIter,
+                        bool verbose, bool computeEigenvectors,
+                        int& info);
 };
 
 #endif // TMATRIX_HPP
