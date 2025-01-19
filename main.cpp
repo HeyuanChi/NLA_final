@@ -45,18 +45,18 @@ int main()
     mat TFull = T.fullMatrix();
 
     // Compare only the real part of (Q^H A Q) to TFull 
-    double diff = norm(real(testMat) - TFull, "fro");
-    std::cout << "Frobenius norm of difference: " << diff << std::endl << std::endl;
+    double diff = norm(testMat - TFull, "fro");
+    std::cout << "Frobenius norm of difference: " << diff << std::endl;
 
     // ------------------------------------------------------------------------
     // Output the results for inspection
     // ------------------------------------------------------------------------
-    std::cout << "A (random Hermitian):\n" << A << std::endl;
-    std::cout << "Q (transformation matrix):\n" << Q << std::endl;
-    std::cout << "T (tridiagonal) in dense form:\n" << TFull << std::endl;
-    std::cout << "Q^H A Q (using Q.t() for demonstration):\n" << testMat << std::endl;
-    std::cout << "Difference (real(testMat) - TFull):\n"
-              << real(testMat) - TFull << std::endl;
+    // std::cout << "A (random Hermitian):\n" << A << std::endl;
+    // std::cout << "Q (transformation matrix):\n" << Q << std::endl;
+    // std::cout << "T (tridiagonal) in dense form:\n" << TFull << std::endl;
+    // std::cout << "Q^H A Q (using Q.t() for demonstration):\n" << testMat << std::endl;
+    // std::cout << "Difference (real(testMat) - TFull):\n"
+    //           << real(testMat) - TFull << std::endl;
 
     return 0;
 }
