@@ -13,16 +13,14 @@ find_package(Armadillo REQUIRED)
 
 # Add the include directory
 include_directories(${ARMADILLO_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_library(NLA_Project STATIC
-    src/TMatrix.cpp
-    src/HouseholderTridiag.cpp
+# Add source files
+set(SOURCES
+    src/main.cpp
 )
 
 # Define the executable target
-add_executable(main main.cpp)
+add_executable(main ${SOURCES})
 
 # Link Armadillo library
 target_link_libraries(main PRIVATE ${ARMADILLO_LIBRARIES})
-target_link_libraries(main PRIVATE NLA_Project)
