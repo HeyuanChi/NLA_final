@@ -40,7 +40,7 @@ double TMatrix::wilkinsonShift(size_t end) const
     return shift;
 }
 
-void TMatrix::solve2x2Block(size_t i, arma::cx_mat &Q)
+void TMatrix::solve2x2Block(size_t i, arma::cx_mat &Q, double tol)
 {
     // The 2x2 block is:
     // [ a  b ]
@@ -49,7 +49,7 @@ void TMatrix::solve2x2Block(size_t i, arma::cx_mat &Q)
     double b = m_subdiag(i);
     double c = m_diag(i+1);
 
-    if (std::abs(b) < 1e-15)
+    if (std::abs(b) < tol)
     {
         // Already effectively diagonal
         m_subdiag(i) = 0.0;
@@ -71,15 +71,12 @@ void TMatrix::solve2x2Block(size_t i, arma::cx_mat &Q)
     m_subdiag(i)= 0.0;  // This block is now diagonalized
 
     // Update columns i, i+1 of Q
+    // copy to avoid overwriting
     arma::cx_vec Qi   = Q.col(i);
     arma::cx_vec Qip1 = Q.col(i+1);
 
-    // Make a copy to avoid overwriting
-    arma::cx_vec tmpQi   = Qi;
-    arma::cx_vec tmpQip1 = Qip1;
-
-    Qi   =  cos_*tmpQi - sin_*tmpQip1;
-    Qip1 =  sin_*tmpQi + cos_*tmpQip1;
+    Q.col(i)   =  cos_*Qi - sin_*Qip1;
+    Q.col(i+1) =  sin_*Qi + cos_*Qip1;
 }
 
 void TMatrix::qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol)
@@ -99,24 +96,27 @@ void TMatrix::qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol)
         double f = s * m_subdiag(i);
         double b = c * m_subdiag(i);
 
-        double rVal = 0.0;
-        givensRotate(g, f, c, s, rVal);
+        double r = 0.0;
+        givensRotate(g, f, c, s, r);
 
         if (i > start)
         {
-            m_subdiag(i - 1) = rVal; // update previous subdiagonal
+            m_subdiag(i - 1) = r; // update previous subdiagonal
         }
 
         g = m_diag(i) - p;
-        double r = (m_diag(i + 1) - g) * s + 2.0 * c * b;
+        r = (m_diag(i + 1) - g) * s + 2.0 * c * b;
         p = s * r;
         m_diag(i) = g + p;
         g = c*r - b;
 
         // Update Q for columns i, i+1
-        arma::cx_vec tmpQi = Q.col(i); // copy to avoid overwriting
-        Q.col(i)   =  c*tmpQi + s*Q.col(i+1);
-        Q.col(i+1) = -s*tmpQi + c*Q.col(i+1);
+        // copy to avoid overwriting
+        arma::cx_vec Qi   = Q.col(i);
+        arma::cx_vec Qip1 = Q.col(i+1);
+
+        Q.col(i)   =  c*Qi + s*Qip1;
+        Q.col(i+1) = -s*Qi + c*Qip1;
     }
 
     // 4) Update the bottom element
@@ -203,7 +203,7 @@ void TMatrix::qrEigen(arma::cx_mat &Q, double tol, size_t maxIter)
         if (end - start == 1)
         {
             // If it's just a 2x2 block, solve directly
-            solve2x2Block(start, Q);
+            solve2x2Block(start, Q, tol);
         }
         else
         {

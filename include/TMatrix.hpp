@@ -65,7 +65,7 @@ public:
      * @param tol      Threshold for deciding when a subdiagonal element is "small enough" to set to zero.
      * @param maxIter  Maximum number of iterations to attempt before giving up.
      */
-    void qrEigen(arma::cx_mat &Q, double tol = 1e-14, size_t maxIter = 1000);
+    void qrEigen(arma::cx_mat &Q, double tol = 1e-30, size_t maxIter = 10000);
 
 private:
     size_t m_size {0};    ///< Matrix dimension
@@ -89,8 +89,9 @@ private:
      *
      * @param i   The starting index of the 2x2 block.
      * @param Q   The matrix of accumulated eigenvectors (updated in-place).
+     * @param tol     Threshold for determining small subdiagonal elements.
      */
-    void solve2x2Block(size_t i, arma::cx_mat &Q);
+    void solve2x2Block(size_t i, arma::cx_mat &Q, double tol);
 
     /**
      * @brief Perform one implicit-shift QR step on the sub-block [start, end] of the tridiagonal,
@@ -114,14 +115,15 @@ private:
      */
     inline void givensRotate(double f, double g, double &c, double &s, double &r) const
     {
-        if (std::abs(g) < 1e-30)
+        double eps = 1e-30;
+        if (std::abs(g) < eps)
         {
             // g ~ 0
             c = 1.0;
             s = 0.0;
             r = f;
         }
-        else if (std::abs(f) < 1e-30)
+        else if (std::abs(f) < eps)
         {
             // f ~ 0
             c = 0.0;

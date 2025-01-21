@@ -6,7 +6,7 @@
 int main()
 {
     arma::arma_rng::set_seed_random();   // Initialize random seed
-    size_t n = 4;                  // Matrix dimension
+    size_t n = 20;                  // Matrix dimension
 
     // Create a random complex matrix Z
     arma::cx_mat Z = arma::randu<arma::cx_mat>(n, n);
@@ -43,25 +43,26 @@ int main()
     // Compute difference
     double val_diff = arma::norm(eigvals_arma - eigvals_tridiag_sorted, 2);
 
-    // Also check that Q^H * A * Q is approximately diagonal
-    arma::cx_mat checkMat = Q.t() * A * Q; // Q.t() is the conjugate transpose of Q
+    // 计算 A*Q - Q*Lambda（其中 Lambda = diag(eigvals_sorted)）
+    arma::cx_mat AQ = A * Q;
+    arma::cx_mat QL = Q * arma::diagmat(eigvals_t);
+    arma::cx_mat diff_mat = AQ - QL;
 
-    // The diagonal of checkMat should match T.diag() (possibly in a permuted order),
-    // and the off-diagonal entries should be near zero.
-    // We'll measure the norm of the off-diagonal as a rough check.
-    arma::cx_mat offdiag = checkMat;
-    for (size_t i = 0; i < n; i++)
-    {
-        offdiag(i, i) = arma::cx_double(0.0, 0.0);
-    }
-    double offdiag_norm = arma::norm(offdiag, "fro");
+    // 对角化误差：Frobenius 范数或 2 范数均可
+    double norm_diff_mat = arma::norm(diff_mat, "fro");
+
+    // 检查正交（酉）性：Q^H * Q 是否为单位阵
+    // 对复矩阵而言，Q^H 即 Q 的 Hermitian transpose
+    arma::cx_mat I_test = Q.t() * Q;
+    double norm_orth = arma::norm(I_test - arma::eye<arma::cx_mat>(n, n), "fro");
 
     std::cout << "===========================================\n";
     std::cout << "Hermitian matrix dimension: " << n << std::endl;
     std::cout << "Armadillo's eig_sym eigenvalues:\n" << eigvals_arma.t() << std::endl;
-    std::cout << "Tridiagonal + QR iteration eigenvalues:\n" << eigvals_t.t() << std::endl;
+    std::cout << "Tridiagonal + QR iteration eigenvalues:\n" << eigvals_tridiag_sorted.t() << std::endl;
     std::cout << "Sorted difference in eigenvalues = " << val_diff << std::endl;
-    std::cout << "Norm of off-diagonal in Q^H * A * Q = " << offdiag_norm << std::endl;
+    std::cout << "Eigenvector check: ||A * Q - Q * Lambda||_F = " << norm_diff_mat << std::endl;
+    std::cout << "Orthonormality check, ||Q^H * Q - I||_F = " << norm_orth << std::endl;
     std::cout << "===========================================\n";
 
     return 0;
