@@ -145,38 +145,36 @@ std::pair<size_t, size_t> TMatrix::getSubBlock(double tol)
     }
 
     // Skip any top portion that is already decoupled
-    size_t start = 0;
-    for (size_t i = 0; i < n - 1; i++)
-    {
-        if (std::abs(m_subdiag(i)) < tol)
-        {
+    size_t end = n - 1;
+    size_t i = end - 1;
+    while (true) {
+        if (std::abs(m_subdiag(i)) < tol) {
             m_subdiag(i) = 0.0;
-            start++;
-        }
-        else
-        {
+            end--;
+        } else {
             break;
         }
+        if (i == 0) break;
+        --i;
     }
 
-    if (start >= n - 1)
+    if (end <= 0)
     {
         // Everything is decoupled
-        return {start, start};
+        return {end, end};
     }
 
     // Find the first contiguous block of non-zero subdiagonals
-    size_t end = start;
-    for (size_t i = start; i < n - 1; i++)
-    {
-        if (std::abs(m_subdiag(i)) > tol)
-        {
-            end++;
-        }
-        else
-        {
+    size_t start = end - 1;
+    i = start - 1;
+    while (true) {
+        if (std::abs(m_subdiag(i)) > tol) {
+            start--;
+        } else {
             break;
         }
+        if (i == 0) break;
+        --i;
     }
 
     return {start, end};
