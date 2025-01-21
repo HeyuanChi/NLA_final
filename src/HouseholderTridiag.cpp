@@ -6,7 +6,7 @@ void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T)
 
     uword n = A.n_rows;
     Q.eye(n, n);          // Initialize Q as the identity
-    cx_mat R = A;         // Copy A to R
+    arma::cx_mat R = A;         // Copy A to R
 
     // Construct Householder transformations column by column
     for (uword k = 0; k < n - 1; ++k)
@@ -37,11 +37,11 @@ void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T)
 
             // 3) Apply the Householder matrix (H = I - 2 v v^*) to R (left and right)
             //    R <- H^* R H
-            cx_mat RsubL = R.submat(k+1, k, n-1, n-1);  // R { k+1: n-1, k: n-1 }
+            cx_mat RsubL = R.submat(k+1, k, n-1, n-1);  // R[k+1:n-1, k:n-1]
             RsubL -= 2.0 * (v * (v.t() * RsubL));  // R = H R = R - 2 v v^* R
             R.submat(k+1, k, n-1, n-1) = RsubL;
 
-            cx_mat RsubR = R.submat(k, k+1, n-1, n-1);  // R { k1: n-1, k+1: n-1 }
+            cx_mat RsubR = R.submat(k, k+1, n-1, n-1);  // R[k:n-1, k+1:n-1]
             RsubR -= 2.0 * (RsubR * v) * v.t();  // R = R H = R - 2 R v v^* 
             R.submat(k, k+1, n-1, n-1) = RsubR;
 
@@ -77,9 +77,9 @@ void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T)
 
     // 6) Copy the diagonal and subdiagonal of R (real part) into T
     for (uword i = 0; i < n; ++i) {
-        T.diag(i) = R(i, i).real();
+        T.diag()(i) = R(i, i).real();
         if (i < n - 1) {
-            T.subdiag(i) = R(i+1, i).real();
+            T.subdiag()(i) = R(i+1, i).real();
         }
     }
 }
