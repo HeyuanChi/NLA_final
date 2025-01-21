@@ -144,7 +144,7 @@ std::pair<size_t, size_t> TMatrix::getSubBlock(double tol)
         return {0, 0};
     }
 
-    // Skip any top portion that is already decoupled
+    // Skip any portion that is already decoupled
     size_t end = n - 1;
     size_t i = end - 1;
     while (true) {

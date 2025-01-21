@@ -130,12 +130,22 @@ private:
             s = (g >= 0.0) ? 1.0 : -1.0;
             r = std::abs(g);
         }
+        else if (std::abs(f) >= std::abs(f))
+        {
+            double tau = g / f;
+            double d = std::hypot(1, tau);
+            c = 1 / d;
+            s = tau * c;
+            r = f * d;
+        }
         else
         {
-            double d = std::sqrt(f*f + g*g);
-            r = (f >= 0.0) ? d : -d;
-            c = f / r;
-            s = g / r;
+            double tau = f / g;
+            double d = std::hypot(1, tau);
+            double sign = tau > 0 ? 1 : -1;
+            s = sign / d;
+            c = sign * tau * s;
+            r = sign * g * d;
         }
     }
 
