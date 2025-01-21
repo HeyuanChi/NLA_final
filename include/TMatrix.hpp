@@ -135,7 +135,7 @@ private:
             double tau = g / f;
             double d = std::hypot(1, tau);
             c = 1 / d;
-            s = tau * c;
+            s = - tau * c;
             r = f * d;
         }
         else
@@ -143,7 +143,7 @@ private:
             double tau = f / g;
             double d = std::hypot(1, tau);
             double sign = tau > 0 ? 1 : -1;
-            s = sign / d;
+            s = - sign / d;
             c = sign * tau * s;
             r = sign * g * d;
         }

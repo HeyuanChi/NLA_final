@@ -85,46 +85,48 @@ void TMatrix::qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol)
     double shift = wilkinsonShift(end);
 
     // 2) The first Givens combination
-    double g = m_diag(start) - shift;
-    double s = 1.0;
-    double c = 1.0;
-    double p = 0.0;
+                                                    // Init
+    double g = m_diag(start) - shift;               // g(start-1) = T[start, start] - shift
+    double s = -1.0;                                // s(start-1) = -1.0
+    double c = 1.0;                                 // c(start-1) =  1.0
+    double p = 0.0;                                 // p(start-1) =  0.0
+    double q = 0.0;                                 // q(start-1) =  0.0
 
     // 3) Sweep through subdiagonal elements
     for (size_t i = start; i < end; i++)
     {
-        double f = s * m_subdiag(i);
-        double b = c * m_subdiag(i);
+        double f = - s * m_subdiag(i);              // f(i) = -s(i-1) * T[i, i+1]
+        double b = c * m_subdiag(i);                // b(i) =  c(i-1) * T[i, i+1]
 
         double r = 0.0;
-        givensRotate(g, f, c, s, r);
+        // Givens matrix G = [  c(i)  s(i) ]
+        //                   [ -s(i)  c(i) ]
+        givensRotate(g, f, c, s, r);                // Compute c(i), s(i) and r(i) by Givens(g(i-1), f(i))
+
 
         if (i > start)
-        {
-            m_subdiag(i - 1) = r; // update previous subdiagonal
+        {                                           // Update previous subdiagonal
+            m_subdiag(i - 1) = r;                   // T[i, i-1] = T[i-1, i] = r(i)
         }
 
-        g = m_diag(i) - p;
-        r = (m_diag(i + 1) - g) * s + 2.0 * c * b;
-        p = s * r;
-        m_diag(i) = g + p;
-        g = c*r - b;
+        g = m_diag(i) - p;                          // g(i) = T[i, i] - p(i-1)
+        q = (g - m_diag(i + 1)) * s + 2.0 * c * b;  // q(i) = (g(i) - T[i+1, i+1]) * s(i) + 2 * c(i) * b(i)
+        p = - s * q;                                // p(i) = -s(i) * q(i)
+        m_diag(i) = g + p;                          // T[i, i] = g(i) + p(i)
+        g = c * q - b;                              // g(i) = c(i) * q(i) - b(i)
 
         // Update Q for columns i, i+1
+        // Q_new[:, i: i+1] = Q[:, i: i+1] * G
         // copy to avoid overwriting
-        arma::cx_vec Qi   = Q.col(i);
-        arma::cx_vec Qip1 = Q.col(i+1);
-
-        Q.col(i)   =  c*Qi + s*Qip1;
-        Q.col(i+1) = -s*Qi + c*Qip1;
+        arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
+        arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
+        Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c(i) * Q[:, i  ] - s(i) * Q[:, i+1]
+        Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s(i) * Q[:, i  ] + c(i) * Q[:, i+1]
     }
 
     // 4) Update the bottom element
-    m_diag(end) -= p;
-    if (end > 0 && (end - 1) < m_size - 1)
-    {
-        m_subdiag(end - 1) = g;
-    }
+    m_diag(end) -= p;                               // T[end, end] = T[end, end] - p(end-1)
+    m_subdiag(end - 1) = g;                         // T[end-1, end] = T[end, end-1] = g(end-1)
 
     // 5) Zero out subdiagonals if they are too small
     for (size_t i = start; i < end; i++)
@@ -213,7 +215,7 @@ void TMatrix::qrEigen(arma::cx_mat &Q, double tol, size_t maxIter)
         if (iterCount >= maxIter)
         {
             std::cerr << "[Warning] QR iteration did not converge after "
-                      << maxIter << " steps.\n";
+                      << maxIter << " steps. Please increase maxIter.\n";
             break;
         }
 
