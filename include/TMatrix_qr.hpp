@@ -158,7 +158,7 @@ inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q,
     // 5) Zero out subdiagonals if they are too small
     for (size_t i = start; i < end; i++)
     {
-        if (std::abs(m_subdiag(i)) < tol)
+        if (std::abs(m_subdiag(i)) < (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
         {
             m_subdiag(i) = 0.0;
         }
@@ -178,7 +178,7 @@ inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)
 
     while (true)
     {
-        if (std::abs(m_subdiag(i)) < tol)
+        if (std::abs(m_subdiag(i)) < (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
         {
             m_subdiag(i) = 0.0;
             end--;
@@ -203,12 +203,13 @@ inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)
     i = start - 1;
     while (true)
     {
-        if (std::abs(m_subdiag(i)) > tol)
+        if (std::abs(m_subdiag(i)) > (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
         {
             start--;
         }
         else
         {
+            m_subdiag(i) = 0.0;
             break;
         }
         if (i == 0)
@@ -221,7 +222,7 @@ inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)
     return {start, end};
 }
 
-inline void TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter)
+inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter)
 {
     // If Q is not initialized, we could do: Q.eye(m_size, m_size);
     // Typically, Q should already contain transformations if needed.
@@ -262,12 +263,14 @@ inline void TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter)
         // Additional cleanup: zero out tiny subdiagonals
         for (std::size_t i = 0; i < m_size - 1; i++)
         {
-            if (std::abs(m_subdiag(i)) < tol)
+            if (std::abs(m_subdiag(i)) < (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
             {
                 m_subdiag(i) = 0.0;
             }
         }
     }
+
+    return iterCount;
 }
 
 #endif // TMATRIX_QR_HPP

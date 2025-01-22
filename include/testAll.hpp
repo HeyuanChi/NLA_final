@@ -67,7 +67,7 @@ inline void runAllTests(std::size_t n,
 
     // 4) QR iteration on T
     t1 = std::chrono::steady_clock::now();
-    T.qrEigen(Q, 1e-15, 100000);
+    std::size_t iterCount = T.qrEigen(Q, 1e-15, 100000);
     t2 = std::chrono::steady_clock::now();
     double qrTime = std::chrono::duration<double>(t2 - t1).count();
 
@@ -102,6 +102,7 @@ inline void runAllTests(std::size_t n,
     }
     std::cout << "Householder time = " << householderTime << " seconds.\n";
     std::cout << "QR time          = " << qrTime << " seconds.\n";
+    std::cout << "Iterations       = " << iterCount << " times.\n";
     std::cout << "------------------------------------------------\n";
     std::cout << "Chosen eigenvalues (sorted):\n" << chosenSorted.t();
     std::cout << "Recovered eigenvalues (sorted):\n" << evalsSorted.t();

@@ -85,12 +85,13 @@ public:
      *        the real symmetric tridiagonal. The results are accumulated in Q,
      *        which represents the eigenvectors upon completion.
      *
-     * @param[in,out] Q       The matrix on which we accumulate the orthogonal transformations.
-     *                        On return, its columns are the eigenvectors.
-     * @param[in]     tol     Threshold for deciding when a subdiagonal element is "small enough" to set to zero.
-     * @param[in]     maxIter Maximum number of iterations to attempt before giving up.
+     * @param[in,out] Q         The matrix on which we accumulate the orthogonal transformations.
+     *                          On return, its columns are the eigenvectors.
+     * @param[in]     tol       Threshold for deciding when a subdiagonal element is "small enough" to set to zero.
+     * @param[in]     maxIter   Maximum number of iterations to attempt before giving up.
+     * @return Number of iterations.
      */
-    inline void qrEigen(arma::cx_mat& Q, double tol = 1e-15, std::size_t maxIter = 10000);
+    inline std::size_t qrEigen(arma::cx_mat& Q, double tol = 1e-15, std::size_t maxIter = 10000);
 
 private:
     std::size_t m_size {0};      ///< Matrix dimension
