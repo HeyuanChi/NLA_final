@@ -13,15 +13,15 @@ find_package(Armadillo REQUIRED)
 
 # Add the include directory
 include_directories(${ARMADILLO_INCLUDE_DIRS})
+include_directories(include)
 
 # Add source files
 set(SOURCES
-    include/householderTridiag.hpp
     src/main.cpp
 )
 
 # Define the executable target
-add_executable(main src/main.cpp)
+add_executable(main ${SOURCES})
 
 # Link Armadillo library
 target_link_libraries(main PRIVATE ${ARMADILLO_LIBRARIES})
