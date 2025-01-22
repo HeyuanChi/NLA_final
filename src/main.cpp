@@ -204,62 +204,64 @@ arma::mat TMatrix::fullMatrix() const
 double TMatrix::wilkinsonShift(size_t end) const
 {
     // end >= 1
-    double p = m_diag(end);
-    double a = m_diag(end - 1);
-    double b = m_subdiag(end - 1);  // T[end-1, end] = subdiag(end-1)
+    // 2x2 Block [ a(n-1)  b(n-1) ]
+    //           [ b(n-1)  a(n)   ]
+    // b > eps (unreduced 2x2 Block)
+    double an   = m_diag(end);
+    double anm1 = m_diag(end - 1);
+    double bnm1 = m_subdiag(end - 1);
 
-    double g = (a - p) / (2.0 * b);
-    double r = std::sqrt(g*g + 1.0);
+    double g = (anm1 - an) / (2.0 * bnm1);  // g = (a(n-1) - a(n)) / (2 * b(n-1))
+    double r = std::sqrt(g*g + 1.0);        // r = sqrt(g^2 + 1)
 
     double shift = 0.0;
     if (g >= 0.0)
     {
-        shift = p - b / (g + r);
+        shift = an - bnm1 / (g + r);
     }
     else
     {
-        shift = p - b / (g - r);
+        shift = an - bnm1 / (g - r);
     }
-    return shift;
+    return shift;                           // shift = a(n) - b(n-1) / (g + sign(g) * r)
 }
 
 void TMatrix::solve2x2Block(size_t i, arma::cx_mat &Q, double tol)
 {
     // The 2x2 block is:
-    // [ a  b ]
-    // [ b  c ]
-    double a = m_diag(i);
-    double b = m_subdiag(i);
-    double c = m_diag(i+1);
+    // [ x  y ]
+    // [ y  z ]
+    double x = m_diag(i);
+    double y = m_subdiag(i);
+    double z = m_diag(i+1);
 
-    if (std::abs(b) < tol)
+    if (std::abs(y) < tol)
     {
         // Already effectively diagonal
         m_subdiag(i) = 0.0;
         return;
     }
 
-    double tau = (c - a) / (2.0 * b);
-    double t   = (tau >= 0.0) ? 1.0 : -1.0;
-    t         /= (std::abs(tau) + std::sqrt(1.0 + tau*tau));
+    double tau = (z - x) / (2.0 * y);                           // tau = (z - x) / (2 * y)
+    double t   = (tau >= 0.0) ? 1.0 : -1.0;                 
+    t         /= (std::abs(tau) + std::sqrt(1.0 + tau*tau));    // t = sign(tau) / (|tau| + sqrt(tau^2 + 1))
 
-    double cos_ = 1.0 / std::sqrt(1.0 + t*t);
-    double sin_ = t * cos_;
+    double c = 1.0 / std::sqrt(1.0 + t*t);                      // c = 1 / sqrt(t^2 + 1)
+    double s = t * c;                                           // s = t * c
 
-    double aNew = a*cos_*cos_ - 2.0*b*sin_*cos_ + c*sin_*sin_;
-    double cNew = a*sin_*sin_ + 2.0*b*sin_*cos_ + c*cos_*cos_;
-
+    double aNew = x*c*c - 2.0*y*s*c + z*s*s;                    // xNew = x c^2 - 2 y s c + z s^2
+    double cNew = x*s*s + 2.0*y*s*c + z*c*c;                    // zNew = x s^2 + 2 y s c + z c^2
     m_diag(i)   = aNew;
     m_diag(i+1) = cNew;
-    m_subdiag(i)= 0.0;  // This block is now diagonalized
+    m_subdiag(i)= 0.0;                                          // yNew = 0.0
 
-    // Update columns i, i+1 of Q
+    // Update Q for columns i, i+1
+    // Q_new[:, i: i+1] = Q[:, i: i+1] * G
     // copy to avoid overwriting
-    arma::cx_vec Qi   = Q.col(i);
-    arma::cx_vec Qip1 = Q.col(i+1);
-
-    Q.col(i)   =  cos_*Qi - sin_*Qip1;
-    Q.col(i+1) =  sin_*Qi + cos_*Qip1;
+    arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
+    arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
+    Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c * Q[:, i] - s * Q[:, i+1]
+    Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s * Q[:, i] + c * Q[:, i+1]
 }
 
 void TMatrix::qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol)
@@ -303,8 +305,8 @@ void TMatrix::qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol)
         // copy to avoid overwriting
         arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
         arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
-        Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c(i) * Q[:, i  ] - s(i) * Q[:, i+1]
-        Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s(i) * Q[:, i  ] + c(i) * Q[:, i+1]
+        Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c(i) * Q[:, i] - s(i) * Q[:, i+1]
+        Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s(i) * Q[:, i] + c(i) * Q[:, i+1]
     }
 
     // 4) Update the bottom element
@@ -504,7 +506,7 @@ void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T)
 int main()
 {
     arma::arma_rng::set_seed_random();   // Initialize random seed
-    size_t n = 20;                  // Matrix dimension
+    size_t n = 80;                  // Matrix dimension
 
     // Create a random complex matrix Z
     arma::cx_mat Z = arma::randu<arma::cx_mat>(n, n);
@@ -526,7 +528,7 @@ int main()
 
     // 2) QR iteration on the real tridiagonal T
     //    Q will be further updated so that A = Q * diag(...) * Q^H
-    T.qrEigen(Q);
+    T.qrEigen(Q, 1e-15, 100000);
 
     // After qrEigen, T.diag() should hold the eigenvalues, and Q columns should be eigenvectors.
     // For a Hermitian matrix, these eigenvalues should be real.
