@@ -8,8 +8,7 @@
 
 /**
  * @brief A class that stores a real symmetric tridiagonal matrix of size n×n.
- *        Main diagonal is in m_diag, subdiagonal (also equals superdiagonal for symmetric)
- *        is in m_subdiag.
+ *        Main diagonal is in m_diag, subdiagonal is in m_subdiag.
  *
  *        Also provides a QR iteration method to compute its eigen-decomposition.
  */
@@ -52,7 +51,7 @@ public:
     }
 
     /**
-     * @brief Convert the tridiagonal form to a full n x n matrix (for debugging or output).
+     * @brief Convert the tridiagonal form to a full n x n matrix.
      *
      * @return An arma::mat with the tridiagonal entries placed accordingly.
      */
@@ -64,11 +63,11 @@ public:
      *        which represents the eigenvectors upon completion.
      *
      * @param Q        (input/output) The matrix on which we accumulate the orthogonal transformations.
-     *                 Initially, Q can be set to identity. On return, its columns are the eigenvectors.
+     *                 On return, its columns are the eigenvectors.
      * @param tol      Threshold for deciding when a subdiagonal element is "small enough" to set to zero.
      * @param maxIter  Maximum number of iterations to attempt before giving up.
      */
-    void qrEigen(arma::cx_mat &Q, double tol = 1e-30, size_t maxIter = 10000);
+    void qrEigen(arma::cx_mat &Q, double tol = 1e-15, size_t maxIter = 10000);
 
 private:
     size_t m_size {0};    ///< Matrix dimension
@@ -78,8 +77,7 @@ private:
     // ============= Helper functions for QR iteration =============
 
     /**
-     * @brief Compute the Wilkinson shift from the bottom-right 2x2 block of
-     *        the sub-tridiagonal matrix.
+     * @brief Compute the Wilkinson shift from the bottom-right 2x2 block.
      *
      * @param end Index specifying the bottom of the block we are considering.
      * @return The shift to use in the QR step.
@@ -87,12 +85,11 @@ private:
     double wilkinsonShift(size_t end) const;
 
     /**
-     * @brief Analytically diagonalize a 2x2 block in the tridiagonal (i.e. for indices i, i+1),
-     *        and update Q accordingly.
+     * @brief Analytically diagonalize a 2x2 block in the tridiagonal and update Q accordingly.
      *
      * @param i   The starting index of the 2x2 block.
-     * @param Q   The matrix of accumulated eigenvectors (updated in-place).
-     * @param tol     Threshold for determining small subdiagonal elements.
+     * @param Q   The matrix of accumulated eigenvectors.
+     * @param tol Threshold for determining small subdiagonal elements.
      */
     void solve2x2Block(size_t i, arma::cx_mat &Q, double tol);
 
@@ -102,7 +99,7 @@ private:
      *
      * @param start   Starting index of the sub-block.
      * @param end     Ending index of the sub-block.
-     * @param Q       Matrix of accumulated eigenvectors (updated in-place).
+     * @param Q       Matrix of accumulated eigenvectors.
      * @param tol     Threshold for determining small subdiagonal elements.
      */
     void qrStep(size_t start, size_t end, arma::cx_mat &Q, double tol);
@@ -352,7 +349,7 @@ std::pair<size_t, size_t> TMatrix::getSubBlock(double tol)
     }
 
     // Find the first contiguous block of non-zero subdiagonals
-    size_t start = end - 1;
+    size_t start = end;
     i = start - 1;
     while (true) {
         if (std::abs(m_subdiag(i)) > tol) {
@@ -501,69 +498,103 @@ void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T)
     }
 }
 
-// ================== MAIN ==================
-
-int main()
+/**
+ * @brief Generate a random Hermitian matrix A = Q * diag(eigvals) * Q^H,
+ *        where Q is obtained from a random complex matrix via qr(), 
+ *        and eigvals is a user-provided real vector (can contain duplicates).
+ *
+ * @param n         Dimension of the matrix.
+ * @param eigvals   Real eigenvalues of size n.
+ * @return          Hermitian matrix of size n×n having the specified eigenvalues.
+ */
+void randHermitian(std::size_t n, const arma::vec& eigvals, arma::cx_mat& Q, arma::cx_mat& A)
 {
-    arma::arma_rng::set_seed_random();   // Initialize random seed
-    size_t n = 80;                  // Matrix dimension
+    // 1) Generate a random complex matrix randA
+    arma::cx_mat randA = arma::randu<arma::cx_mat>(n, n);
 
-    // Create a random complex matrix Z
-    arma::cx_mat Z = arma::randu<arma::cx_mat>(n, n);
+    // 2) Use qr() to obtain a unitary Q
+    arma::cx_mat R;
+    arma::qr(Q, R, randA);
 
-    // Make A Hermitian by combining Z and its transpose:
-    // A = 0.5 * (Z + Z^T)
-    arma::cx_mat A = 0.5 * (Z + Z.t());
+    // 3) Form a diagonal matrix from the specified real eigenvalues
+    arma::mat D = arma::diagmat(eigvals);
 
-    // Force diagonal elements of A to be real
+    // 4) Form A = Q * D * Q^H
+    A = Q * D * Q.t();
+
+    // 5) Force diagonal elements of A to be real
     for (size_t i = 0; i < n; ++i) {
         A(i, i) = std::complex<double>(A(i, i).real(), 0.0);
     }
 
-    // 1) Householder tridiagonalization
+}
+
+// ================== MAIN ==================
+
+int main()
+{
+    // Set dimension
+    std::size_t n = 10;
+
+    // -------------------------------
+    // 1) Choose some (possibly repeated) eigenvalues
+    //    Example:  [3, 3, 5, 5, 5, 7, 10, 10, 0, -2]
+    // -------------------------------
+    arma::vec trueEigvals(n, arma::fill::none);
+    trueEigvals = {2, 2, 5, 5, 5, 5, 5, -3, -3, -3};
+
+    // * Generate random real eigenvalues
+    // arma::vec myEigvals = arma::randu<arma::vec>(n); 
+
+    // -------------------------------
+    // 2) Generate a random Hermitian matrix with those eigenvalues
+    // -------------------------------
+    arma::cx_mat A, trueEigvecs;
+    randHermitian(n, trueEigvals, trueEigvecs, A);
+
+    // Check: A should be Hermitian
+    // The off-diagonal difference between A and its Hermitian transpose should be ~ 0.
+    double hermErr = arma::norm(A - A.t(), "fro");
+    std::cout << "[Check] Hermitian difference norm(A - A^H) = " << hermErr << "\n";
+
+    // -------------------------------
+    // 3) Now use your TMatrix + householderTridiag + T.qrEigen
+    //    to recover the eigen-decomposition.
+    // -------------------------------
+    // 3a) Householder tridiagonalization
     arma::cx_mat Q;
     TMatrix T(n);
-
     householderTridiag(A, Q, T);
 
-    // 2) QR iteration on the real tridiagonal T
-    //    Q will be further updated so that A = Q * diag(...) * Q^H
+    // 3b) QR iteration on T
+    //     On return, T.diag() has the eigenvalues, Q has the eigenvectors.
     T.qrEigen(Q, 1e-15, 100000);
 
-    // After qrEigen, T.diag() should hold the eigenvalues, and Q columns should be eigenvectors.
-    // For a Hermitian matrix, these eigenvalues should be real.
+    arma::vec evals = T.diag();  // not sorted
 
-    // Let's verify by comparing against Armadillo's eig_sym
-    arma::vec eigvals_arma = arma::eig_sym(A); // sorted in ascending order
-    arma::vec eigvals_t = T.diag();            // might not be sorted
+    // 4) Compare with the known (sorted) eigenvalues
+    arma::vec evalsSorted   = arma::sort(evals);
+    arma::vec knownSorted   = arma::sort(trueEigvals);
+    double evDiff = arma::norm(evalsSorted - knownSorted, 2);
 
-    // We can sort T.diag() for comparison
-    arma::vec eigvals_tridiag_sorted = arma::sort(eigvals_t);
+    std::cout << "-----------------------------------------\n";
+    std::cout << "User-defined eigenvalues (sorted):\n" << knownSorted.t();
+    std::cout << "Recovered eigenvalues (sorted):\n" << evalsSorted.t();
+    std::cout << "|| difference || in eigenvalues = " << evDiff << "\n";
 
-    // Compute difference
-    double val_diff = arma::norm(eigvals_arma - eigvals_tridiag_sorted, 2);
+    // 5) Check the diagonalization error:  A*Q - Q*Lambda
+    arma::cx_mat AQ   = A * Q;
+    arma::cx_mat QL   = Q * arma::diagmat(evals);
+    double frob_diff  = arma::norm(AQ - QL, "fro");
+    std::cout << "Diagonalization check, ||A*Q - Q*Lambda||_F = " << frob_diff << "\n";
 
-    // Compute diff = A * Q - Q * diag(eigvals)
-    arma::cx_mat AQ = A * Q;
-    arma::cx_mat QL = Q * arma::diagmat(eigvals_t);
-    arma::cx_mat diff_mat = AQ - QL;
-
-    // Eigenvector check: diagonalization error (Frobenius norm)
-    double norm_diff_mat = arma::norm(diff_mat, "fro");
-
-    // Orthonormality check
-    // Check if Q^H * Q = I
+    // 6) Check Q's orthonormality:  Q^H * Q should be ~ I
     arma::cx_mat I_test = Q.t() * Q;
-    double norm_orth = arma::norm(I_test - arma::eye<arma::cx_mat>(n, n), "fro");
+    double orthErr = arma::norm(I_test - arma::eye<arma::cx_mat>(n, n), "fro");
+    std::cout << "Orthonormality check, ||Q^H*Q - I||_F = " << orthErr << "\n";
 
-    std::cout << "===========================================\n";
-    std::cout << "Hermitian matrix dimension: " << n << std::endl;
-    std::cout << "Armadillo's eig_sym eigenvalues:\n" << eigvals_arma.t() << std::endl;
-    std::cout << "Tridiagonal + QR iteration eigenvalues:\n" << eigvals_tridiag_sorted.t() << std::endl;
-    std::cout << "Sorted difference in eigenvalues = " << val_diff << std::endl;
-    std::cout << "Eigenvector check: ||A * Q - Q * Lambda||_F = " << norm_diff_mat << std::endl;
-    std::cout << "Orthonormality check, ||Q^H * Q - I||_F = " << norm_orth << std::endl;
-    std::cout << "===========================================\n";
+    std::cout << "-----------------------------------------\n";
+    std::cout << "Done.\n";
 
     return 0;
 }
