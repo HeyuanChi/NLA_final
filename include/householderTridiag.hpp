@@ -27,8 +27,10 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
             // 1) Extract the portion in column k
             arma::cx_vec x = R.submat(k+1, k, n-1, k);
             double xnorm = arma::norm(x, 2);
-            if (xnorm < tol) continue;
-
+            if (xnorm < tol) 
+            {
+                continue;
+            }
             // 2) Compute the Householder vector v
             std::complex<double> x0 = x(0);
             double absx0 = std::abs(x0);
@@ -44,24 +46,20 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
             arma::cx_vec v = x;
             v(0) += alpha;
             double vnorm = arma::norm(v, 2);
-            if (vnorm < tol) continue;
+            if (vnorm < tol) 
+            {
+                continue;
+            }
             v /= vnorm;  // Normalize
 
             // 3) Apply the Householder matrix (H = I - 2 v v^*) to R (left and right)
             //    R <- H^* R H
-            arma::cx_mat RsubL = R.submat(k+1, k, n-1, n-1);  // R[k+1:n-1, k:n-1]
-            RsubL -= 2.0 * (v * (v.t() * RsubL));  // R = H R = R - 2 v v^* R
-            R.submat(k+1, k, n-1, n-1) = RsubL;
-
-            arma::cx_mat RsubR = R.submat(k, k+1, n-1, n-1);  // R[k:n-1, k+1:n-1]
-            RsubR -= 2.0 * (RsubR * v) * v.t();  // R = R H = R - 2 R v v^* 
-            R.submat(k, k+1, n-1, n-1) = RsubR;
+            R.submat(k+1, k, n-1, n-1) -= 2.0 * (v * (v.t() * R.submat(k+1, k, n-1, n-1))); // R = H R = R - 2 v v^* R
+            R.submat(k, k+1, n-1, n-1) -= 2.0 * (R.submat(k, k+1, n-1, n-1) * v) * v.t();   // R = R H = R - 2 R v v^* 
 
             // 4) Accumulate transformations into Q
             //    Q <- Q * H
-            arma::cx_mat Qsub = Q.submat(0, k+1, n-1, n-1);
-            Qsub -= 2.0 * (Qsub * v) * v.t();
-            Q.submat(0, k+1, n-1, n-1) = Qsub;  
+            Q.submat(0, k+1, n-1, n-1) -= 2.0 * (Q.submat(0, k+1, n-1, n-1) * v) * v.t();  
         }       
 
         // 5) Phase adjustment: Adjust R(k+1, k) to real number
@@ -72,18 +70,9 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
         {
             // c = conj(d) / |d|, d * c = |d|
             std::complex<double> c = std::conj(d) / absd;
-
-            // R(k+1, j) *= c
-            for (size_t j = 0; j < n; j++)
-                R(k+1, j) *= c;
-
-            // (R(i, k+1) *= conj(c)
-            for (size_t i = 0; i < n; i++)
-                R(i, k+1) *= std::conj(c);
-
-            // Q(i, k+1) *= conj(c)
-            for (size_t i = 0; i < n; i++)
-                Q(i, k+1) *= std::conj(c);
+            R.row(k+1) *= c;
+            R.col(k+1) *= std::conj(c);
+            Q.col(k+1) *= std::conj(c);
         }
     }
 

@@ -15,6 +15,8 @@
  */
 inline void randHermitian(std::size_t n, const arma::vec& eigvals, arma::cx_mat& Q, arma::cx_mat& A)
 {
+    arma::arma_rng::set_seed_random();   // Initialize random seed
+    
     // 1) Generate a random complex matrix randA
     arma::cx_mat randA = arma::randu<arma::cx_mat>(n, n);
 

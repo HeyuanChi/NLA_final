@@ -64,7 +64,7 @@ inline double TMatrix::wilkinsonShift(std::size_t end) const
         shift = an - bnm1 / (g - r);
     }
 
-    return shift; // Wilkinson shift
+    return shift;
 }
 
 inline void TMatrix::solve2x2Block(std::size_t i, arma::cx_mat& Q, double tol)
@@ -224,11 +224,7 @@ inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)
 
 inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter)
 {
-    // If Q is not initialized, we could do: Q.eye(m_size, m_size);
-    // Typically, Q should already contain transformations if needed.
-
     std::size_t iterCount = 0;
-
     while (true)
     {
         auto se = getSubBlock(tol);
