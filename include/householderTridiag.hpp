@@ -22,7 +22,10 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
 
     // Construct Householder transformations column by column
     for (size_t k = 0; k < n - 1; ++k)
-    {
+    {   
+        T.diag()(k) = R(k, k).real();
+        std::complex<double> phase;
+        auto Rblock = R.submat(k+1, k+1, n-1, n-1);
         if (k < n - 2) {
             // 1) Extract the portion in column k
             arma::cx_vec x = R.submat(k+1, k, n-1, k);
@@ -31,17 +34,18 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
             {
                 continue;
             }
+
             // 2) Compute the Householder vector v
             std::complex<double> x0 = x(0);
             double absx0 = std::abs(x0);
+            
             //    alpha = - x(0) / |x(0)| * ||x||
             if (absx0 < tol) {
-                x0 = std::complex<double>(xnorm, 0.0);
+                phase = std::complex<double>(1.0, 0.0);
             } else {
-                x0 /= absx0;
-                x0 *= xnorm;
+                phase = x0 / absx0;
             }
-            std::complex<double> alpha = -x0;
+            std::complex<double> alpha = -phase * xnorm;
             //    v = v + alpha * e1
             arma::cx_vec v = x;
             v(0) += alpha;
@@ -54,35 +58,35 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
 
             // 3) Apply the Householder matrix (H = I - 2 v v^*) to R (left and right)
             //    R <- H^* R H
-            R.submat(k+1, k, n-1, n-1) -= 2.0 * (v * (v.t() * R.submat(k+1, k, n-1, n-1))); // R = H R = R - 2 v v^* R
-            R.submat(k, k+1, n-1, n-1) -= 2.0 * (R.submat(k, k+1, n-1, n-1) * v) * v.t();   // R = R H = R - 2 R v v^* 
+            Rblock -= 2.0 * (v * (v.t() * Rblock)); // R = H R = R - 2 v v^* R
+            Rblock -= 2.0 * (Rblock * v) * v.t();   // R = R H = R - 2 R v v^* 
+            T.subdiag()(k) = xnorm;
 
             // 4) Accumulate transformations into Q
             //    Q <- Q * H
-            Q.submat(0, k+1, n-1, n-1) -= 2.0 * (Q.submat(0, k+1, n-1, n-1) * v) * v.t();  
+            auto Qblock = Q.submat(0, k+1, n-1, n-1);
+            Qblock -= 2.0 * (Qblock * v) * v.t(); 
         }       
+        else {
+            phase = R(k+1, k);
+            double absphase = std::abs(phase);
+            T.subdiag()(k) = absphase;
+            phase /= absphase;
+        }
 
         // 5) Phase adjustment: Adjust R(k+1, k) to real number
-        std::complex<double> d = R(k+1, k);
-        double absd = std::abs(d);
-        // No adjustment if the norm of d is too small or d is a real number
-        if (absd > tol && (std::abs(d.imag()) > tol))
+        // No adjustment if phase is a real number
+        if (std::abs(phase.imag()) > tol)
         {
-            // c = conj(d) / |d|, d * c = |d|
-            std::complex<double> c = std::conj(d) / absd;
-            R.row(k+1) *= c;
-            R.col(k+1) *= std::conj(c);
-            Q.col(k+1) *= std::conj(c);
+            // c = conj(phase)
+            std::complex<double> c = std::conj(phase);
+            Rblock.row(0) *= c;
+            Rblock.col(0) *= phase;
+            Q.col(k+1) *= phase;
         }
     }
 
-    // 6) Copy the diagonal and subdiagonal of R (real part) into T
-    for (size_t i = 0; i < n; ++i) {
-        T.diag()(i) = R(i, i).real();
-        if (i < n - 1) {
-            T.subdiag()(i) = R(i+1, i).real();
-        }
-    }
+    T.diag()(n-1) = R(n-1, n-1).real();
 }
 
 #endif // HOUSEHOLDER_TRIDIAG_HPP

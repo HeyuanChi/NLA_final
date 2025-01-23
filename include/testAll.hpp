@@ -1,3 +1,6 @@
+#ifndef TEST_ALL_HPP
+#define TEST_ALL_HPP
+
 #include "testOne.hpp"
 
 void testAll()
@@ -24,3 +27,5 @@ void testAll()
     std::cout << "\n============================== Test: n = 100, random eigenvalues ==============================\n\n";
     runTest(100, true, arma::vec()); 
 }
+
+#endif // TEST_ALL_HPP

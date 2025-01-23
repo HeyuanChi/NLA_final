@@ -1,5 +1,5 @@
-#ifndef TEST_ALL_HPP
-#define TEST_ALL_HPP
+#ifndef TEST_ONE_HPP
+#define TEST_ONE_HPP
 
 #include <iostream>
 #include <chrono>
@@ -12,10 +12,10 @@
  *        1) Choose or generate eigenvalues.
  *        2) Form a Hermitian matrix A.
  *        3) Perform Householder tridiagonalization on A.
- *        4) Check Q.t()*A*Q - T.
+ *        4) Check Q.t() A Q - T.
  *        5) Perform QR iteration on T.
  *        6) Compare sorted eigenvalues with the chosen ones.
- *        7) Check A*Q - Q*Lambda, and Q^H*Q, and print results.
+ *        7) Check A Q - Q Lambda, and Q.t() Q, and print results.
  *
  * @param[in]  n                      matrix dimension
  * @param[in]  generateRandomEigvals  if true, random eigenvalues are generated instead of using customEigvals
@@ -69,12 +69,12 @@ inline void runTest(std::size_t n,
     arma::vec chosenSorted  = arma::sort(chosenEigvals);
     double evDiff = arma::norm(evalsSorted - chosenSorted, 2);
 
-    // 6) Check the diagonalization error: A*Q - Q*Lambda
+    // 6) Check the diagonalization error: A Q - Q Lambda
     arma::cx_mat AQ  = A * Q;
     arma::cx_mat QL  = Q * arma::diagmat(evals);
     double frob_diff = arma::norm(AQ - QL, "fro");
 
-    // Check orthonormality: Q^H * Q ~ I
+    // Check orthonormality: Q.t() Q ~ I
     arma::cx_mat I_test = Q.t() * Q;
     double orthErr = arma::norm(I_test - arma::eye<arma::cx_mat>(n, n), "fro");
 
@@ -105,12 +105,12 @@ inline void runTest(std::size_t n,
     }
     std::cout << "\n---------------------------------------------------------------------\n";
     std::cout << "                           |                        |\n";
-    std::cout << " Tridiagonalization check  |   ||Q^* A Q - T||_F    |  " << triDiff << "\n";
+    std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F  |  " << triDiff << "\n";
     std::cout << " Difference in eigenvalues |   ||difference||       |  " << evDiff << "\n";
     std::cout << " Diagonalization check     |   ||A Q - Q Lambda||_F |  " << frob_diff << "\n";
-    std::cout << " Orthonormality check      |   ||Q^* Q - I||_F      |  " << orthErr << "\n";
+    std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F    |  " << orthErr << "\n";
     std::cout << "                           |                        |\n";
     std::cout << "---------------------------------------------------------------------\n\n";
 }
 
-#endif // TEST_ALL_HPP
+#endif // TEST_ONE_HPP
