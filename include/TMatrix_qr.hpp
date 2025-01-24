@@ -115,32 +115,33 @@ inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q,
     double g = m_diag(start) - shift;               // g(start-1) = T[start, start] - shift
     double s = -1.0;                                // s(start-1) = -1.0
     double c = 1.0;                                 // c(start-1) =  1.0
+    double f = 0.0;                                 // f(start-1) =  0.0
+    double h = 0.0;                                 // h(start-1) =  0.0
+    double e = 0.0;                                 // e(start-1) =  0.0
     double p = 0.0;                                 // p(start-1) =  0.0
     double q = 0.0;                                 // q(start-1) =  0.0
+    double r = 0.0;                                 // r(start-1) =  0.0
 
     // 3) Sweep through subdiagonal elements
     for (size_t i = start; i < end; i++)
     {
-        double f = - s * m_subdiag(i);              // f(i) = -s(i-1) * T[i, i+1]
-        double b = c * m_subdiag(i);                // b(i) =  c(i-1) * T[i, i+1]
+        f = - s * m_subdiag(i);              // f(i) = -s(i-1) * T[i, i+1]
+        h = c * m_subdiag(i);                // h(i) =  c(i-1) * T[i, i+1]
+        e = m_diag(i) - p;                   // e(i) = T[i, i] - p(i-1)
 
-        double r = 0.0;
         // Givens matrix G
         // [  c(i)     s(i) ]
         // [ -s(i)     c(i) ]
         givensRotate(g, f, c, s, r);                // Compute c(i), s(i) and r(i) by Givens(g(i-1), f(i))
 
-
         if (i > start)
         {                                           // Update previous subdiagonal
             m_subdiag(i - 1) = r;                   // T[i, i-1] = T[i-1, i] = r(i)
         }
-
-        g = m_diag(i) - p;                          // g(i) = T[i, i] - p(i-1)
-        q = (g - m_diag(i + 1)) * s + 2.0 * c * b;  // q(i) = (g(i) - T[i+1, i+1]) * s(i) + 2 * c(i) * b(i)
+        q = (e - m_diag(i + 1)) * s + 2.0 * c * h;  // q(i) = (e(i) - T[i+1, i+1]) * s(i) + 2 * c(i) * h(i)
         p = - s * q;                                // p(i) = -s(i) * q(i)
-        m_diag(i) = g + p;                          // T[i, i] = g(i) + p(i)
-        g = c * q - b;                              // g(i) = c(i) * q(i) - b(i)
+        m_diag(i) = e + p;                          // T[i, i] = e(i) + p(i)
+        g = c * q - h;                              // g(i) = c(i) * q(i) - h(i)
 
         // Update Q for columns i, i+1
         // Q_new[:, i: i+1] = Q[:, i: i+1] * G
