@@ -154,15 +154,6 @@ inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q,
     // 4) Update the bottom element
     m_diag(end) -= p;                               // T[end, end] = T[end, end] - p(end-1)
     m_subdiag(end - 1) = g;                         // T[end-1, end] = T[end, end-1] = g(end-1)
-
-    // 5) Zero out subdiagonals if they are too small
-    for (size_t i = start; i < end; i++)
-    {
-        if (std::abs(m_subdiag(i)) < (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
-        {
-            m_subdiag(i) = 0.0;
-        }
-    }
 }
 
 inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)

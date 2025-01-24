@@ -35,7 +35,7 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
                 continue;
             }
 
-            // 2) Compute the Householder vector v
+            // 2) Compute the Householder vector w
             std::complex<double> x0 = x(0);
             double absx0 = std::abs(x0);
             
@@ -46,26 +46,26 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
                 phase = x0 / absx0;
             }
             std::complex<double> alpha = -phase * xnorm;
-            //    v = v + alpha * e1
-            arma::cx_vec v = x;
-            v(0) += alpha;
-            double vnorm = arma::norm(v, 2);
-            if (vnorm < tol) 
+            //    w = w + alpha * e1
+            arma::cx_vec w = x;
+            w(0) += alpha;
+            double wnorm = arma::norm(w, 2);
+            if (wnorm < tol) 
             {
                 continue;
             }
-            v /= vnorm;  // Normalize
+            w /= wnorm;  // Normalize
 
-            // 3) Apply the Householder matrix (H = I - 2 v v^*) to R (left and right)
+            // 3) Apply the Householder matrix (H = I - 2 w w^*) to R (left and right)
             //    R <- H^* R H
-            Rblock -= 2.0 * (v * (v.t() * Rblock)); // R = H R = R - 2 v v^* R
-            Rblock -= 2.0 * (Rblock * v) * v.t();   // R = R H = R - 2 R v v^* 
+            Rblock -= 2.0 * (w * (w.t() * Rblock)); // R = H R = R - 2 w w^* R
+            Rblock -= 2.0 * (Rblock * w) * w.t();   // R = R H = R - 2 R w w^* 
             T.subdiag()(k) = xnorm;
 
             // 4) Accumulate transformations into Q
             //    Q <- Q * H
             auto Qblock = Q.submat(0, k+1, n-1, n-1);
-            Qblock -= 2.0 * (Qblock * v) * v.t(); 
+            Qblock -= 2.0 * (Qblock * w) * w.t(); 
         }       
         else {
             phase = R(k+1, k);
