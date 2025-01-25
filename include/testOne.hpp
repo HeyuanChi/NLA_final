@@ -69,10 +69,8 @@ inline void runTest(std::size_t n,
     arma::vec chosenSorted  = arma::sort(chosenEigvals);
     double evDiff = arma::norm(evalsSorted - chosenSorted, 2);
 
-    // 6) Check the diagonalization error: A Q - Q Lambda
-    arma::cx_mat AQ  = A * Q;
-    arma::cx_mat QL  = Q * arma::diagmat(evals);
-    double frob_diff = arma::norm(AQ - QL, "fro");
+    // 6) Check the diagonalization error: Q.t() A Q - Lambda
+    double frob_diff = arma::norm(Q.t() * A * Q - arma::diagmat(evals), "fro");
 
     // Check orthonormality: Q.t() Q ~ I
     arma::cx_mat I_test = Q.t() * Q;
@@ -104,12 +102,12 @@ inline void runTest(std::size_t n,
         std::cout << evalsSorted.subvec(i*10, std::min((i+1)*10-1, n-1)).t();
     }
     std::cout << "\n---------------------------------------------------------------------\n";
-    std::cout << "                           |                        |\n";
-    std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F  |  " << triDiff << "\n";
-    std::cout << " Difference in eigenvalues |   ||difference||       |  " << evDiff << "\n";
-    std::cout << " Diagonalization check     |   ||A Q - Q Lambda||_F |  " << frob_diff << "\n";
-    std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F    |  " << orthErr << "\n";
-    std::cout << "                           |                        |\n";
+    std::cout << "                           |                            |\n";
+    std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F      |  " << triDiff << "\n";
+    std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
+    std::cout << " Diagonalization check     |   ||Q.t() A Q - Lambda||_F |  " << frob_diff << "\n";
+    std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F        |  " << orthErr << "\n";
+    std::cout << "                           |                            |\n";
     std::cout << "---------------------------------------------------------------------\n\n";
 }
 
