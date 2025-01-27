@@ -21,6 +21,8 @@
  * @param[in]  n                      matrix dimension
  * @param[in]  generateRandomEigvals  if true, random eigenvalues are generated instead of using customEigvals
  * @param[in]  customEigvals          user-provided eigenvalues (used only if generateRandomEigvals == false)
+ * @param[in]  computeQ               bool for computing eigenvectors or not
+ * @param[in]  eigenvectorsQR         bool for computing eigenvectors in qrStep or not (by inverse iteration)
  */
 inline void runTest(std::size_t n,
                         bool generateRandomEigvals,
