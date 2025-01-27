@@ -1,12 +1,13 @@
 #ifndef TEST_ONE_HPP
 #define TEST_ONE_HPP
 
-#include <iostream>
-#include <chrono>
 #include <armadillo>
 #include "householderTridiag.hpp"
 #include "randHermitian.hpp"
 #include "eigenvectors.hpp"
+
+#include <iostream>
+#include <fstream> 
 
 /**
  * @brief Run the entire test procedure:
@@ -122,50 +123,54 @@ inline void runTest(std::size_t n,
     arma::cx_mat I_test = Q.t() * Q;
     double orthErr = arma::norm(I_test - arma::eye<arma::cx_mat>(n, n), "fro");
 
-    // 7) Print results
-    std::cout << "Matrix dimension: " << n << "\n";
-    if (generateRandomEigvals)
-    {
-        std::cout << "Eigenvalues were randomly generated.\n";
-    }
-    else
-    {
-        std::cout << "Eigenvalues were provided by user.\n";
-    }
-    std::cout << "Householder time  = " << householderTime << " seconds.\n";
-    std::cout << "QR time           = " << qrTime << " seconds.\n";
-    if (not eigenvectorsQR)
-    {
-        std::cout << "Eigenvectors time = " << eigvecTime << " seconds.\n";
-    }
-    std::cout << "Total time        = " << totalTime << " seconds.\n";
-    std::cout << "QR Iterations     = " << iterCount << " times.\n";
-    std::cout << "\n---------------------------------------------------------------------\n\n";
-    std::cout << "Chosen eigenvalues (sorted):\n";
-    for (std::size_t i = 0; i < n / 10; i++) 
-    {
-        std::cout << chosenSorted.subvec(i*10, std::min((i+1)*10-1, n-1)).t();
-    }
-    std::cout << "\nRecovered eigenvalues (sorted):\n";
-    for (std::size_t i = 0; i < n / 10; i++) 
-    {
-        std::cout << evalsSorted.subvec(i*10, std::min((i+1)*10-1, n-1)).t();
-    }
-    std::cout << "\n---------------------------------------------------------------------\n";
-    std::cout << "                           |                            |\n";
-    if (computeQ)
-    {
-        std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F      |  " << triDiff << "\n";
-        std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
-        std::cout << " Diagonalization check     |   ||Q.t() A Q - Lambda||_F |  " << frob_diff << "\n";
-        std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F        |  " << orthErr << "\n";
-    }
-    else
-    {
-        std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
-    }
-    std::cout << "                           |                            |\n";
-    std::cout << "---------------------------------------------------------------------\n\n";
+    // // 7) Print results
+    // std::cout << "Matrix dimension: " << n << "\n";
+    // if (generateRandomEigvals)
+    // {
+    //     std::cout << "Eigenvalues were randomly generated.\n";
+    // }
+    // else
+    // {
+    //     std::cout << "Eigenvalues were provided by user.\n";
+    // }
+    // std::cout << "Householder time  = " << householderTime << " seconds.\n";
+    // std::cout << "QR time           = " << qrTime << " seconds.\n";
+    // if (not eigenvectorsQR)
+    // {
+    //     std::cout << "Eigenvectors time = " << eigvecTime << " seconds.\n";
+    // }
+    // std::cout << "Total time        = " << totalTime << " seconds.\n";
+    // std::cout << "QR Iterations     = " << iterCount << " times.\n";
+    // std::cout << "\n---------------------------------------------------------------------\n\n";
+    // std::cout << "Chosen eigenvalues (sorted):\n";
+    // for (std::size_t i = 0; i < n / 10; i++) 
+    // {
+    //     std::cout << chosenSorted.subvec(i*10, std::min((i+1)*10-1, n-1)).t();
+    // }
+    // std::cout << "\nRecovered eigenvalues (sorted):\n";
+    // for (std::size_t i = 0; i < n / 10; i++) 
+    // {
+    //     std::cout << evalsSorted.subvec(i*10, std::min((i+1)*10-1, n-1)).t();
+    // }
+    // std::cout << "\n---------------------------------------------------------------------\n";
+    // std::cout << "                           |                            |\n";
+    // if (computeQ)
+    // {
+    //     std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F      |  " << triDiff << "\n";
+    //     std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
+    //     std::cout << " Diagonalization check     |   ||Q.t() A Q - Lambda||_F |  " << frob_diff << "\n";
+    //     std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F        |  " << orthErr << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
+    // }
+    // std::cout << "                           |                            |\n";
+    // std::cout << "---------------------------------------------------------------------\n\n";
+
+    std::ofstream outputFile("output.txt", std::ios::app);
+    outputFile << totalTime << ',' << householderTime << ',' << qrTime << ',' << eigvecTime << ',' << evDiff << ',' << frob_diff << ',' << orthErr << std::endl;
+    outputFile.close();
 }
 
 #endif // TEST_ONE_HPP
