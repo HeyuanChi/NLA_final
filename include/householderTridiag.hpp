@@ -9,15 +9,15 @@
  *        such that A = Q * T * Q^H, where T is a real tridiagonal matrix
  *        and Q is unitary.
  *
- * @param[in]  A   (n x n) complex matrix
- * @param[out] Q   (n x n) unitary matrix
- * @param[out] T   structure holding the diagonal and subdiagonal of the tridiagonal matrix
- * @param[in]  tol threshold
+ * @param[in]  A        (n x n) complex matrix
+ * @param[out] Q        (n x n) unitary matrix
+ * @param[out] T        structure holding the diagonal and subdiagonal of the tridiagonal matrix
+ * @param[in]  computeQ bool for computing Q or not
+ * @param[in]  tol      threshold
  */
-inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T, double tol=1e-15)
+inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& T, bool computeQ=true, double tol=1e-15)
 {
     size_t n = A.n_rows;
-    Q.eye(n, n);                // Initialize Q as the identity
     arma::cx_mat R = A;         // Copy A to R
 
     // Construct Householder transformations column by column
@@ -62,10 +62,13 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
             Rblock -= 2.0 * (Rblock * w) * w.t();   // R = R H = R - 2 R w w^* 
             T.subdiag()(k) = xnorm;
 
-            // 4) Accumulate transformations into Q
+            // 4) Accumulate transformations into Q if computeQ
             //    Q <- Q * H
-            auto Qblock = Q.submat(0, k+1, n-1, n-1);
-            Qblock -= 2.0 * (Qblock * w) * w.t(); 
+            if (computeQ)
+            {
+                auto Qblock = Q.submat(0, k+1, n-1, n-1);
+                Qblock -= 2.0 * (Qblock * w) * w.t(); 
+            }
         }       
         else {
             phase = R(k+1, k);
@@ -82,7 +85,10 @@ inline void householderTridiag(const arma::cx_mat& A, arma::cx_mat& Q, TMatrix& 
             std::complex<double> c = std::conj(phase);
             Rblock.row(0) *= c;
             Rblock.col(0) *= phase;
-            Q.col(k+1) *= phase;
+            if (computeQ)
+            {
+                Q.col(k+1) *= phase;
+            }
         }
     }
 
