@@ -7,11 +7,11 @@ void testAll()
 {
     // 1) Test n=20 with random eigenvalues without eigenvectors
     std::cout << "\n====================== Test: n = 20, random eigenvalues, no eigenvectors ======================\n\n";
-    runTest(20, true, arma::vec(), false); 
+    runTest(20, true, arma::vec(), false, true); 
 
     // 2) Test n=100 with random eigenvalues without eigenvectors
     std::cout << "\n====================== Test: n = 100, random eigenvalues, no eigenvectors =====================\n\n";
-    runTest(100, true, arma::vec(), false); 
+    runTest(100, true, arma::vec(), false, true); 
 
     // 3) Test n=20 with random eigenvalues
     std::cout << "\n============================== Test: n = 20, random eigenvalues ===============================\n\n";

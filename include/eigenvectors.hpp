@@ -123,11 +123,8 @@ inline arma::mat computeAllEigenVectors(const TMatrix &T, arma::vec evals, doubl
         // Orthogonalize against other vectors in the same degenerate group
         for (std::size_t j = groupStart; j < i; ++j)
         {
-            if (std::fabs(sortedEvals[i] - sortedEvals[j]) < tol)
-            {
-                double coeff = arma::dot(vi, V.col(sortedIndex[j]));
-                vi -= coeff * V.col(sortedIndex[j]);
-            }
+            double coeff = arma::dot(vi, V.col(sortedIndex[j]));
+            vi -= coeff * V.col(sortedIndex[j]);
         }
 
         // Normalize the eigenvector
