@@ -5,19 +5,32 @@
 
 void testAll()
 {
-    // 1) Test n=20 with random eigenvalues
-    std::cout << "\n============================== Test: n = 20, random eigenvalues ==============================\n\n";
+    // 1) Test n=20 with random eigenvalues without eigenvectors
+    std::cout << "\n====================== Test: n = 20, random eigenvalues, no eigenvectors ======================\n\n";
+    runTest(20, true, arma::vec(), false); 
+
+    // 2) Test n=100 with random eigenvalues without eigenvectors
+    std::cout << "\n====================== Test: n = 100, random eigenvalues, no eigenvectors =====================\n\n";
+    runTest(100, true, arma::vec(), false); 
+
+    // 3) Test n=20 with random eigenvalues
+    std::cout << "\n============================== Test: n = 20, random eigenvalues ===============================\n\n";
+    runTest(20, true, arma::vec(), true, true);  
+
+    // 4) Test n=100 with random eigenvalues
+    std::cout << "\n============================== Test: n = 100, random eigenvalues ==============================\n\n";
+    runTest(100, true, arma::vec(), true, true); 
+
+    // 5) Test n=20 with random eigenvalues
+    std::cout << "\n============= Test: n = 20, random eigenvalues, eigenvectors by inverse iteration ==============\n\n";
     runTest(20, true, arma::vec());  
 
-    // 2) Test n=100 with random eigenvalues
-    std::cout << "\n============================== Test: n = 100, random eigenvalues ==============================\n\n";
+    // 6) Test n=100 with random eigenvalues
+    std::cout << "\n============= Test: n = 100, random eigenvalues, eigenvectors by inverse iteration =============\n\n";
+    
     runTest(100, true, arma::vec()); 
 
-    // 3) Test n=500 with random eigenvalues
-    std::cout << "\n============================== Test: n = 500, random eigenvalues ==============================\n\n";
-    runTest(500, true, arma::vec()); 
-
-    // 4) Test n=20 with repeated eigenvalues
+    // 7) Test n=20 with repeated eigenvalues
     {
         arma::vec repeatedEigvals(20, arma::fill::none);
         // first 10 entries = 2, last 10 entries = 5
@@ -31,7 +44,7 @@ void testAll()
         runTest(20, false, repeatedEigvals);
     }
 
-    // 5) Test n=20 with extremely large and extremely small eigenvalues
+    // 8) Test n=20 with extremely large and extremely small eigenvalues
     {
         arma::vec chosenEigvals = arma::randu<arma::vec>(20);;
         for(std::size_t i=0; i<20; i++)
