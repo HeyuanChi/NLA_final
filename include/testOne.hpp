@@ -6,6 +6,7 @@
 #include <armadillo>
 #include "householderTridiag.hpp"
 #include "randHermitian.hpp"
+#include "eigenvectors.hpp"
 
 /**
  * @brief Run the entire test procedure:
@@ -23,7 +24,9 @@
  */
 inline void runTest(std::size_t n,
                         bool generateRandomEigvals,
-                        const arma::vec& customEigvals)
+                        const arma::vec& customEigvals,
+                        bool computeQ=true,
+                        bool eigenvectorsQR=false)
 {
     // 1) Decide which eigenvalues to use
     arma::vec chosenEigvals;
@@ -48,20 +51,61 @@ inline void runTest(std::size_t n,
 
     // 3) Householder tridiagonalization on A
     arma::cx_mat Q; 
+    Q.eye(n, n);  // Initialize Q as the identity
     TMatrix T(n);
 
     auto t1 = std::chrono::steady_clock::now();
-    householderTridiag(A, Q, T);
+    if (computeQ)
+    {
+        householderTridiag(A, Q, T);
+    }
+    else
+    {
+        householderTridiag(A, Q, T, false);
+    }
     auto t2 = std::chrono::steady_clock::now();
     double householderTime = std::chrono::duration<double>(t2 - t1).count();
     double triDiff = arma::norm(Q.t() * A * Q - T.fullMatrix(), "fro");
 
+    TMatrix T_copy = T;
+
     // 4) QR iteration on T
-    t1 = std::chrono::steady_clock::now();
-    std::size_t iterCount = T.qrEigen(Q, 1e-15, 100000);
-    t2 = std::chrono::steady_clock::now();
-    double qrTime = std::chrono::duration<double>(t2 - t1).count();
-    double totalTime = householderTime + qrTime;
+    std::size_t iterCount;
+    double qrTime, eigvecTime, totalTime;
+    if (computeQ)
+    {
+        if (eigenvectorsQR)
+        {
+            t1 = std::chrono::steady_clock::now();
+            iterCount = T.qrEigen(Q, 1e-15, 100000, true);
+            t2 = std::chrono::steady_clock::now();
+            qrTime = std::chrono::duration<double>(t2 - t1).count();
+            totalTime = householderTime + qrTime;
+        }
+        else
+        {
+            t1 = std::chrono::steady_clock::now();
+            iterCount = T.qrEigen(Q, 1e-15, 100000, false);
+            t2 = std::chrono::steady_clock::now();
+            qrTime = std::chrono::duration<double>(t2 - t1).count();
+
+            t1 = std::chrono::steady_clock::now();
+            arma::mat V = computeAllEigenVectors(T_copy, T.diag());
+            Q = Q * V;
+            t2 = std::chrono::steady_clock::now();
+            eigvecTime = std::chrono::duration<double>(t2 - t1).count();
+
+            totalTime = householderTime + qrTime + eigvecTime;;
+        }
+    }
+    else
+    {
+            t1 = std::chrono::steady_clock::now();
+            iterCount = T.qrEigen(Q, 1e-15, 100000, false);
+            t2 = std::chrono::steady_clock::now();
+            qrTime = std::chrono::duration<double>(t2 - t1).count();
+            totalTime = householderTime + qrTime;
+    }
 
     // 5) Compare final eigenvalues with chosenEigvals (both sorted)
     arma::vec evals = T.diag();
@@ -86,10 +130,14 @@ inline void runTest(std::size_t n,
     {
         std::cout << "Eigenvalues were provided by user.\n";
     }
-    std::cout << "Householder time = " << householderTime << " seconds.\n";
-    std::cout << "QR time          = " << qrTime << " seconds.\n";
-    std::cout << "Total time       = " << totalTime << " seconds.\n";
-    std::cout << "QR Iterations    = " << iterCount << " times.\n";
+    std::cout << "Householder time  = " << householderTime << " seconds.\n";
+    std::cout << "QR time           = " << qrTime << " seconds.\n";
+    if (not eigenvectorsQR)
+    {
+        std::cout << "Eigenvectors time = " << eigvecTime << " seconds.\n";
+    }
+    std::cout << "Total time        = " << totalTime << " seconds.\n";
+    std::cout << "QR Iterations     = " << iterCount << " times.\n";
     std::cout << "\n---------------------------------------------------------------------\n\n";
     std::cout << "Chosen eigenvalues (sorted):\n";
     for (std::size_t i = 0; i < n / 10; i++) 
@@ -103,10 +151,17 @@ inline void runTest(std::size_t n,
     }
     std::cout << "\n---------------------------------------------------------------------\n";
     std::cout << "                           |                            |\n";
-    std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F      |  " << triDiff << "\n";
-    std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
-    std::cout << " Diagonalization check     |   ||Q.t() A Q - Lambda||_F |  " << frob_diff << "\n";
-    std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F        |  " << orthErr << "\n";
+    if (computeQ)
+    {
+        std::cout << " Tridiagonalization check  |   ||Q.t() A Q - T||_F      |  " << triDiff << "\n";
+        std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
+        std::cout << " Diagonalization check     |   ||Q.t() A Q - Lambda||_F |  " << frob_diff << "\n";
+        std::cout << " Orthonormality check      |   ||Q.t() Q - I||_F        |  " << orthErr << "\n";
+    }
+    else
+    {
+        std::cout << " Difference in eigenvalues |   ||Lambda - Lambda_true|| |  " << evDiff << "\n";
+    }
     std::cout << "                           |                            |\n";
     std::cout << "---------------------------------------------------------------------\n\n";
 }

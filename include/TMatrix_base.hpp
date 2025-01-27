@@ -2,10 +2,6 @@
 #define TMATRIX_BASE_HPP
 
 #include <armadillo>
-#include <cstddef>
-#include <utility>
-#include <iostream>
-#include <cmath>
 
 /**
  * @class TMatrix
@@ -89,9 +85,10 @@ public:
      *                  On return, its columns are the eigenvectors.
      * @param tol       Threshold for deciding when a subdiagonal element is "small enough" to set to zero.
      * @param maxIter   Maximum number of iterations to attempt before giving up.
+     * @param computeQ  bool for computing Q or not
      * @return Number of iterations.
      */
-    inline std::size_t qrEigen(arma::cx_mat& Q, double tol = 1e-15, std::size_t maxIter = 10000);
+    inline std::size_t qrEigen(arma::cx_mat& Q, double tol = 1e-15, std::size_t maxIter = 10000, bool computeQ=true);
 
 private:
     std::size_t m_size {0};      ///< Matrix dimension
@@ -109,22 +106,24 @@ private:
     /**
      * @brief Analytically diagonalize a 2x2 block in the tridiagonal and update Q accordingly.
      *
-     * @param i   The starting index of the 2x2 block.
-     * @param Q   The matrix of accumulated eigenvectors.
-     * @param tol Threshold for determining small subdiagonal elements.
+     * @param i         The starting index of the 2x2 block.
+     * @param Q         The matrix of accumulated eigenvectors.
+     * @param computeQ  bool for computing Q or not
+     * @param tol       Threshold for determining small subdiagonal elements.
      */
-    inline void solve2x2Block(std::size_t i, arma::cx_mat& Q, double tol);
+    inline void solve2x2Block(std::size_t i, arma::cx_mat& Q, bool computeQ=true, double tol=1e-15);
 
     /**
      * @brief Perform one implicit-shift QR step on the sub-block [start, end] of the tridiagonal,
      *        and update Q accordingly.
      *
-     * @param start   Starting index of the sub-block.
-     * @param end     Ending index of the sub-block.
-     * @param Q       Matrix of accumulated eigenvectors.
-     * @param tol     Threshold for determining small subdiagonal elements.
+     * @param start     Starting index of the sub-block.
+     * @param end       Ending index of the sub-block.
+     * @param Q         Matrix of accumulated eigenvectors.
+     * @param computeQ  bool for computing Q or not
+     * @param tol       Threshold for determining small subdiagonal elements.
      */
-    inline void qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q, double tol);
+    inline void qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q, bool computeQ=true, double tol=1e-15);
 
     /**
      * @brief A small Givens rotation helper. Returns (c, s, r) for parameters (f, g).

@@ -2,7 +2,6 @@
 #define TMATRIX_QR_HPP
 
 #include <iostream>
-#include <cmath>
 #include "TMatrix_ops.hpp"
 
 inline void TMatrix::givensRotate(double f, double g, double& c, double& s, double& r) const
@@ -67,7 +66,7 @@ inline double TMatrix::wilkinsonShift(std::size_t end) const
     return shift;
 }
 
-inline void TMatrix::solve2x2Block(std::size_t i, arma::cx_mat& Q, double tol)
+inline void TMatrix::solve2x2Block(std::size_t i, arma::cx_mat& Q, bool computeQ, double tol)
 {
     // The 2×2 block is:
     // [ x    y ]
@@ -96,16 +95,19 @@ inline void TMatrix::solve2x2Block(std::size_t i, arma::cx_mat& Q, double tol)
     m_diag(i+1) = cNew;
     m_subdiag(i)= 0.0;                                          // yNew = 0.0
 
-    // Update Q for columns i, i+1
+    // Update Q for columns i, i+1 if computeQ
     // Q_new[:, i: i+1] = Q[:, i: i+1] * G
     // copy to avoid overwriting
-    arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
-    arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
-    Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c * Q[:, i] - s * Q[:, i+1]
-    Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s * Q[:, i] + c * Q[:, i+1]
+    if (computeQ) 
+    {
+        arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
+        arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
+        Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c * Q[:, i] - s * Q[:, i+1]
+        Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s * Q[:, i] + c * Q[:, i+1]
+    }
 }
 
-inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q, double tol)
+inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q, bool computeQ, double tol)
 {
     // 1) Compute the Wilkinson shift
     double shift = wilkinsonShift(end);
@@ -143,13 +145,16 @@ inline void TMatrix::qrStep(std::size_t start, std::size_t end, arma::cx_mat& Q,
         m_diag(i) = e + p;                          // T[i, i] = e(i) + p(i)
         g = c * q - h;                              // g(i) = c(i) * q(i) - h(i)
 
-        // Update Q for columns i, i+1
+        // Update Q for columns i, i+1 if computeQ
         // Q_new[:, i: i+1] = Q[:, i: i+1] * G
         // copy to avoid overwriting
-        arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
-        arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
-        Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c(i) * Q[:, i] - s(i) * Q[:, i+1]
-        Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s(i) * Q[:, i] + c(i) * Q[:, i+1]
+        if (computeQ)
+        {
+            arma::cx_vec Qi   = Q.col(i);               // Q[:, i  ]
+            arma::cx_vec Qip1 = Q.col(i+1);             // Q[:, i+1]
+            Q.col(i)   =  c*Qi - s*Qip1;                // Q_new[:, i] = c(i) * Q[:, i] - s(i) * Q[:, i+1]
+            Q.col(i+1) =  s*Qi + c*Qip1;                // Q_new[:, i] = s(i) * Q[:, i] + c(i) * Q[:, i+1]
+        }
     }
 
     // 4) Update the bottom element
@@ -214,7 +219,7 @@ inline std::pair<std::size_t, std::size_t> TMatrix::getSubBlock(double tol)
     return {start, end};
 }
 
-inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter)
+inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t maxIter, bool computeQ)
 {
     std::size_t iterCount = 0;
     while (true)
@@ -232,12 +237,12 @@ inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t max
         if (end - start == 1)
         {
             // If it's just a 2×2 block, solve directly
-            solve2x2Block(start, Q, tol);
+            solve2x2Block(start, Q, computeQ, tol);
         }
         else
         {
             // Otherwise perform one implicit-shift QR step
-            qrStep(start, end, Q, tol);
+            qrStep(start, end, Q, computeQ, tol);
         }
 
         ++iterCount;
@@ -246,15 +251,6 @@ inline std::size_t TMatrix::qrEigen(arma::cx_mat& Q, double tol, std::size_t max
             std::cerr << "[Warning] QR iteration did not converge after "
                       << maxIter << " steps. Consider increasing maxIter.\n";
             break;
-        }
-
-        // Additional cleanup: zero out tiny subdiagonals
-        for (std::size_t i = 0; i < m_size - 1; i++)
-        {
-            if (std::abs(m_subdiag(i)) < (std::abs(m_diag(i)) + std::abs(m_diag(i+1))) * tol)
-            {
-                m_subdiag(i) = 0.0;
-            }
         }
     }
 
