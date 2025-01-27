@@ -2,10 +2,6 @@
 #define TMATRIX_BASE_HPP
 
 #include <armadillo>
-#include <cstddef>
-#include <utility>
-#include <iostream>
-#include <cmath>
 
 /**
  * @class TMatrix

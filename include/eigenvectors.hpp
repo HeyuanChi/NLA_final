@@ -3,117 +3,141 @@
 
 #include "TMatrix_base.hpp"
 #include <armadillo>
-#include <cmath>
-#include <algorithm>
-#include <random>
-#include <utility>
 
 /**
- * @brief 用 Thomas 算法求解三对角方程 (T - lambda I) * y = x
+ * @brief Solves the tridiagonal system \f$(T - \lambda I) x = \mathit{xRHS}\f$
+ *        using the Thomas algorithm.
  *
- * @param T       输入的三对角矩阵 (real symmetric)
- * @param lambda  给定的特征值
- * @param x       右端项向量
- * @return 解向量 y
+ * @param[in]  T       The tridiagonal matrix.
+ * @param[in]  lambda  The given eigenvalue.
+ * @param[out] xRHS    On entry, the right-hand side vector. On return, the solution vector.
  */
-inline void thomas(const TMatrix &T, double lambda, arma::vec &x)
+inline void thomas(const TMatrix &T, double lambda, arma::vec &xRHS)
 {
     std::size_t n = T.size();
+
+    // Construct the diagonal (b) and subdiagonal/superdiagonal (c) of (T - lambda I).
     arma::vec b = T.diag() - lambda;
     arma::vec c = T.subdiag();
-    arma::vec scratch(n-1, arma::fill::zeros);
 
-    x[0] = x[0] / b[0];
+    // Auxiliary array for forward elimination.
+    arma::vec scratch(n - 1, arma::fill::zeros);
+
+    // Forward elimination
+    xRHS[0] /= b[0];
     scratch[0] = c[0] / b[0];
 
-    for(std::size_t i = 1; i < n; ++i)
+    for (std::size_t i = 1; i < n; ++i)
     {
-        double temp = b[i] - c[i-1] * scratch[i-1];
-        x[i] = (x[i] - c[i-1] * x[i-1]) / temp;
+        double temp = b[i] - c[i - 1] * scratch[i - 1];
+        xRHS[i] = (xRHS[i] - c[i - 1] * xRHS[i - 1]) / temp;
         if (i < n - 1)
         {
             scratch[i] = c[i] / temp;
         }
     }
 
-    for(std::size_t i = n - 1; i > 0; --i)
+    // Back substitution
+    for (std::size_t i = n - 1; i > 0; --i)
     {
-        x[i-1] -= scratch[i-1] * x[i];
+        xRHS[i - 1] -= scratch[i - 1] * xRHS[i];
     }
 }
 
 /**
- * @brief 使用一次 inverse iteration 来求 (T - lambda I) 的特征向量
- *        即先随机初始化一个单位向量 v，然后做一次 (T - lambda I)^{-1} v 的求解并归一化
+ * @brief Computes the eigenvector corresponding to the given eigenvalue \p lambda
+ *        by performing one step of inverse iteration.
  *
- * @param T       输入的三对角矩阵 (real symmetric)
- * @param lambda  给定的特征值
- * @return 计算得到的特征向量
+ * The procedure is:
+ *  1. Randomly initialize a unit vector \f$ v \f$.
+ *  2. Solve \f$ (T - \lambda I) v = v \f$ (in-place).
+ *  3. Normalize \f$ v \f$.
+ *
+ * @param[in] T       The tridiagonal matrix (real symmetric).
+ * @param[in] lambda  The given eigenvalue.
+ * @return A normalized vector representing the eigenvector associated with \p lambda.
  */
 inline arma::vec computeEigenVector(const TMatrix &T, double lambda)
 {
     std::size_t n = T.size();
-    arma::vec v(n, arma::fill::zeros);
 
-    v.randn();
+    // 1. Randomly initialize a unit vector
+    arma::vec v(n, arma::fill::randn);
     v /= arma::norm(v);
+
+    // 2. Solve (T - lambda I)*v = v via the Thomas algorithm
     thomas(T, lambda, v);
+
+    // 3. Normalize
     v /= arma::norm(v);
 
     return v;
 }
 
 /**
- * @brief 计算所有特征向量。对于输入的特征值向量先排序，如果相邻特征值之差 < tol 则认为是相同特征值，
- *        对此做适当的施密特正交化，以保证同一特征值对应的向量正交。
+ * @brief Computes all eigenvectors for the given tridiagonal matrix \p T
+ *        using its eigenvalues \p evals.
  *
- * @param T      三对角矩阵 (real symmetric)
- * @param evals  所有特征值的向量 (长度应该与矩阵维度相同)
- * @param tol    判断特征值是否相等的阈值 (默认 1e-14)
- * @return       组成的特征向量矩阵，每一列为一个特征向量
+ * Steps:
+ *  1. Sort the eigenvalues in ascending order while keeping track of their original indices.
+ *  2. Compute eigenvectors in ascending order.
+ *  3. If two adjacent eigenvalues differ by less than \p tol, assume they are degenerate
+ *     and orthogonalize their eigenvectors to ensure they are mutually orthogonal.
+ *  4. Place each computed vector back into the column corresponding to the original eigenvalue's index.
+ *
+ * @param[in]  T      The tridiagonal matrix (real symmetric).
+ * @param[in]  evals  A vector of all eigenvalues of \p T (length = T.size()).
+ * @param[in]  tol    A threshold to determine if two eigenvalues are considered equal (default = 1e-10).
+ * @return A matrix whose columns are the eigenvectors, corresponding to the original ordering of \p evals.
  */
 inline arma::mat computeAllEigenVectors(const TMatrix &T, arma::vec evals, double tol = 1e-10)
 {
     std::size_t n = T.size();
+
+    // Matrix to store the resulting eigenvectors
     arma::mat V(n, n, arma::fill::zeros);
 
-    arma::uvec sortedIndex = arma::sort_index(evals); // 按升序排序后的索引
-    arma::vec sortedEvals = arma::sort(evals);        // 升序排列的特征值
+    // Sort eigenvalues and keep track of sorted indices
+    arma::uvec sortedIndex = arma::sort_index(evals);
+    arma::vec sortedEvals  = arma::sort(evals);
 
+    // Start index of the current group of (near-)identical eigenvalues
     std::size_t groupStart = 0;
 
+    // Compute the first eigenvector
     arma::vec v0 = computeEigenVector(T, sortedEvals[0]);
-    V.col(0) = v0;
+    V.col(sortedIndex[0]) = v0;
 
-    for(std::size_t i = 1; i < n; ++i)
+    // Compute remaining eigenvectors
+    for (std::size_t i = 1; i < n; ++i)
     {
+        // Check if the current eigenvalue is "different" from the previous one
         if (std::fabs(sortedEvals[i] - sortedEvals[i - 1]) > tol)
         {
             groupStart = i;
         }
 
+        // Compute an eigenvector using inverse iteration
         arma::vec vi = computeEigenVector(T, sortedEvals[i]);
-        for(std::size_t j = groupStart; j < i; ++j)
+
+        // Orthogonalize against other vectors in the same degenerate group
+        for (std::size_t j = groupStart; j < i; ++j)
         {
             if (std::fabs(sortedEvals[i] - sortedEvals[j]) < tol)
             {
-                vi -= arma::dot(vi, V.col(j)) * V.col(j);
+                double coeff = arma::dot(vi, V.col(sortedIndex[j]));
+                vi -= coeff * V.col(sortedIndex[j]);
             }
         }
 
-        double normv = arma::norm(vi);
-        vi /= normv;
-        V.col(i) = vi;
+        // Normalize the eigenvector
+        vi /= arma::norm(vi);
+
+        // Place it in the column corresponding to the original ordering
+        V.col(sortedIndex[i]) = vi;
     }
 
-
-    arma::mat V_reordered(n, n, arma::fill::zeros);
-    for (std::size_t i = 0; i < n; ++i)
-    {
-        V_reordered.col(sortedIndex[i]) = V.col(i);
-    }
-
-    return V_reordered;
+    return V;
 }
 
 #endif // EIGENVECTORS_HPP

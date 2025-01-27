@@ -2,7 +2,6 @@
 #define TMATRIX_QR_HPP
 
 #include <iostream>
-#include <cmath>
 #include "TMatrix_ops.hpp"
 
 inline void TMatrix::givensRotate(double f, double g, double& c, double& s, double& r) const
